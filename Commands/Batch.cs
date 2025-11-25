@@ -29,12 +29,12 @@ public sealed class BatchCommand : AsyncCommand<BatchCommand.Settings>
                 AnsiConsole.MarkupLine($"[red]CSV file not found:[/] {Markup.Escape(settings.CsvPath)}");
                 return 2;
             }
-            lines = await File.ReadAllLinesAsync(settings.CsvPath);
+            lines = await File.ReadAllLinesAsync(settings.CsvPath, cancellationToken);
         }
         else
         {
             using var sr = new StreamReader(Console.OpenStandardInput());
-            var content = await sr.ReadToEndAsync();
+            var content = await sr.ReadToEndAsync(cancellationToken);
             lines = content.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
         }
 
