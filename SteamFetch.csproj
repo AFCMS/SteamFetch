@@ -12,6 +12,8 @@
     <Authors>AFCMS</Authors>
     <Description>CLI tool to download artworks of Steam games</Description>
     <PackageTags>cli;tool;steam</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
 
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -21,6 +23,8 @@
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <PackageReference Include="Spectre.Console.CLI" Version="0.53.0" />
     <PackageReference Include="SteamKit2" Version="3.3.1" />
+
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
