@@ -1,6 +1,6 @@
 # SteamFetch CLI
 
-A .NET 9 command-line tool to discover and download Steam library artworks (capsules, heroes, logos, headers) for a given app. It uses [SteamKit2](https://github.com/SteamRE/SteamKit) to fetch app product info anonymously and constructs direct CDN URLs.
+A .NET 10 command-line tool to discover and download Steam library artworks (capsules, heroes, logos, headers) for a given app. It uses [SteamKit2](https://github.com/SteamRE/SteamKit) to fetch app product info anonymously and constructs direct CDN URLs.
 
 - No API key or login needed
 - Supports fetching a single artwork, listing available artworks, and batch downloads from CSV
