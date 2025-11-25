@@ -8,7 +8,7 @@
     <ToolCommandName>steam_fetch</ToolCommandName>
 
     <PackageId>SteamFetch</PackageId>
-    <Version>0.0.2</Version>
+    <Version>0.0.3</Version>
     <Authors>AFCMS</Authors>
     <Description>CLI tool to download artworks of Steam games</Description>
     <PackageTags>cli;tool;steam</PackageTags>

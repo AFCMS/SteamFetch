@@ -36,7 +36,7 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/v}"
             echo "Detected tag release: version=$VERSION"
           else
-            VERSION="0.0.2-ci-$(date +'%Y%m%d.%H%M%S')"
+            VERSION="0.0.3-ci-$(date +'%Y%m%d.%H%M%S')"
             echo "Detected CI build: version=$VERSION"
           fi
           echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
