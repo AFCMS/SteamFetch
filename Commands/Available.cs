@@ -15,7 +15,7 @@ public sealed class AvailableCommand : AsyncCommand<AvailableCommand.Settings>
         public string? FilterType { get; set; }
     }
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         using var sk = new SteamKitInterface();
         IReadOnlyList<SteamKitInterface.ArtworkVariant> list;
