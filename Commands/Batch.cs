@@ -18,7 +18,7 @@ public sealed class BatchCommand : AsyncCommand<BatchCommand.Settings>
 
     private record Row(uint AppId, string BaseSpec, string? FallbackSpec, string OutputPath);
 
-    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
+    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         // Read CSV lines either from file or stdin
         IEnumerable<string> lines;
