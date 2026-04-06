@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console" Version="0.54.0" />
+    <PackageReference Include="Spectre.Console" Version="0.55.0" />
     <PackageReference Include="Spectre.Console.CLI" Version="0.53.1" />
     <PackageReference Include="SteamKit2" Version="3.4.0" />
 
