@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 public sealed class AvailableCommand : AsyncCommand<AvailableCommand.Settings>
 {
-    public sealed class Settings : CommandSettings
+    public sealed class Settings : JsonCommandSettings
     {
         [CommandArgument(0, "<appid>")]
         [Description("Steam App ID of the game.")]
@@ -15,26 +15,38 @@ public sealed class AvailableCommand : AsyncCommand<AvailableCommand.Settings>
         public string? FilterType { get; set; }
     }
 
+    private sealed record AvailableJsonResult(
+        uint AppId,
+        string Title,
+        string? FilterType,
+        IReadOnlyList<SteamKitInterface.ArtworkVariant> Artworks);
+
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         using var sk = new SteamKitInterface();
         IReadOnlyList<SteamKitInterface.ArtworkVariant> list;
+        string title;
+
         try
         {
-            // Fetch name first to display header
             var kv = await sk.GetProductInfoKV(settings.AppId);
-            var title = kv?["common"]?["name"]?.Value ?? "(unknown)";
+            title = kv?["common"]?["name"]?.Value ?? "(unknown)";
 
-            var t = new Panel($"[bold]{settings.AppId} — {Markup.Escape(title)}[/]")
+            if (!settings.Json)
             {
-                Border = BoxBorder.Rounded
-            };
-            AnsiConsole.Write(t);
+                CliOutput.WriteAppHeader(settings.AppId, title);
+            }
 
             list = await sk.ListAvailableArtworks(settings.AppId);
         }
         catch (Exception ex)
         {
+            if (settings.Json)
+            {
+                CliOutput.WriteJsonError(ex.Message, "error");
+                return -1;
+            }
+
             AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
             return -1;
         }
@@ -42,6 +54,12 @@ public sealed class AvailableCommand : AsyncCommand<AvailableCommand.Settings>
         if (!string.IsNullOrWhiteSpace(settings.FilterType))
         {
             list = list.Where(x => string.Equals(x.Type, settings.FilterType, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        if (settings.Json)
+        {
+            CliOutput.WriteJson(new AvailableJsonResult(settings.AppId, title, settings.FilterType, list));
+            return 0;
         }
 
         if (list.Count == 0)
@@ -58,12 +76,7 @@ public sealed class AvailableCommand : AsyncCommand<AvailableCommand.Settings>
 
         foreach (var a in list)
         {
-            var basePrefix = SteamKitInterface.BuildAssetUrl(settings.AppId, string.Empty);
-            var display = a.Url.StartsWith(basePrefix, StringComparison.OrdinalIgnoreCase)
-                ? a.Url[basePrefix.Length..]
-                : a.Url;
-            var link = $"[link={a.Url}]{Markup.Escape(display)}[/]";
-            table.AddRow(a.Type, a.Variant, a.Language, link);
+            table.AddRow(a.Type, a.Variant, a.Language, CliOutput.FullLink(a.Url));
         }
 
         AnsiConsole.Write(table);

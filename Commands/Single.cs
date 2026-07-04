@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 public class SingleCommand : AsyncCommand<SingleCommand.Settings>
 {
-    public class Settings : CommandSettings
+    public class Settings : JsonCommandSettings
     {
         [CommandArgument(0, "<appid>")]
         [Description("Steam App ID of the game.")]
@@ -27,80 +27,113 @@ public class SingleCommand : AsyncCommand<SingleCommand.Settings>
         public string? OutputPath { get; set; }
     }
 
+    private sealed record SingleJsonResult(
+        uint AppId,
+        string Title,
+        string Type,
+        string Variant,
+        string Language,
+        string? Url,
+        bool Downloaded,
+        string? OutputPath,
+        string? FileUri,
+        IReadOnlyList<string> Warnings,
+        string Status,
+        string? Error);
+
     protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         using var sk = new SteamKitInterface();
 
         try
         {
-            // Fetch name first to display header
             var kv = await sk.GetProductInfoKV(settings.AppId);
             var title = kv?["common"]?["name"]?.Value ?? "(unknown)";
 
-            var t = new Panel($"[bold]{settings.AppId} — {Markup.Escape(title)}[/]")
+            if (!settings.Json)
             {
-                Border = BoxBorder.Rounded
-            };
-            AnsiConsole.Write(t);
+                CliOutput.WriteAppHeader(settings.AppId, title);
+            }
 
-            // Warn for non-image metadata combinations we know aren't images
+            var warnings = new List<string>();
             if (string.Equals(settings.Type, "library_logo", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(settings.Variant, "logo_position", StringComparison.OrdinalIgnoreCase))
             {
-                AnsiConsole.MarkupLine("[yellow]The 'library_logo/logo_position' is metadata, not an image.[/]");
+                const string metadataWarning = "The 'library_logo/logo_position' is metadata, not an image.";
+                warnings.Add(metadataWarning);
+
+                if (!settings.Json)
+                {
+                    AnsiConsole.MarkupLine($"[yellow]{metadataWarning}[/]");
+                }
             }
 
-            // Fetch URL for the requested type/variant/language
             var url = await sk.FetchArtworkUrl(settings.AppId, settings.Type, settings.Variant, settings.Language);
             if (string.IsNullOrWhiteSpace(url))
             {
+                const string notFound = "No artwork found for the given combination.";
+
+                if (settings.Json)
+                {
+                    CliOutput.WriteJson(new SingleJsonResult(
+                        settings.AppId,
+                        title,
+                        settings.Type,
+                        settings.Variant,
+                        settings.Language,
+                        null,
+                        false,
+                        null,
+                        null,
+                        warnings,
+                        "not_found",
+                        notFound));
+                    return 1;
+                }
+
                 AnsiConsole.MarkupLine("[red]No artwork found for the given combination.[/]");
                 AnsiConsole.MarkupLine("Tip: run [cyan]available[/] to list valid combinations.");
                 return 1;
             }
 
-            // Determine whether to download
             var willDownload = !string.IsNullOrWhiteSpace(settings.OutputPath);
             string? finalOutput = null;
+            string? fileUri = null;
 
             if (willDownload)
             {
-                // Resolve output path – if it's a directory, infer filename from URL
-                var output = settings.OutputPath!;
-                if (Directory.Exists(output) || output.EndsWith('/') || output.EndsWith('\\'))
-                {
-                    var fileName = System.IO.Path.GetFileName(new Uri(url).AbsolutePath);
-                    output = System.IO.Path.Combine(output.TrimEnd('/', '\\'), fileName);
-                }
-
-                finalOutput = output;
-
-                await SteamKitInterface.DownloadAsync(url, output);
+                finalOutput = CliOutput.ResolveOutputPath(settings.OutputPath!, url);
+                await SteamKitInterface.DownloadAsync(url, finalOutput, cancellationToken);
+                fileUri = CliOutput.ToFileUri(finalOutput);
             }
 
-            // Build a table like in 'available' with a single row
+            if (settings.Json)
+            {
+                CliOutput.WriteJson(new SingleJsonResult(
+                    settings.AppId,
+                    title,
+                    settings.Type,
+                    settings.Variant,
+                    settings.Language,
+                    url,
+                    willDownload,
+                    finalOutput,
+                    fileUri,
+                    warnings,
+                    "ok",
+                    null));
+                return 0;
+            }
+
             var table = new Table().Border(TableBorder.Rounded);
             table.AddColumn("Type");
             table.AddColumn("Variant");
             table.AddColumn("Language");
             table.AddColumn("URL");
 
-            string linkCell;
-            if (!string.IsNullOrEmpty(finalOutput))
-            {
-                var abs = Path.GetFullPath(finalOutput);
-                var fileUri = new Uri(abs).AbsoluteUri; // file:///...
-                var displayPath = Path.GetFileName(abs);
-                linkCell = $"[link={fileUri}]{Markup.Escape(displayPath)}[/]";
-            }
-            else
-            {
-                var basePrefix = SteamKitInterface.BuildAssetUrl(settings.AppId, string.Empty);
-                var display = url.StartsWith(basePrefix, StringComparison.OrdinalIgnoreCase)
-                    ? url[basePrefix.Length..]
-                    : url;
-                linkCell = $"[link={url}]{Markup.Escape(display)}[/]";
-            }
+            var linkCell = !string.IsNullOrEmpty(fileUri)
+                ? CliOutput.FullLink(fileUri)
+                : CliOutput.FullLink(url);
 
             table.AddRow(settings.Type, settings.Variant, settings.Language, linkCell);
             AnsiConsole.Write(table);
@@ -108,11 +141,23 @@ public class SingleCommand : AsyncCommand<SingleCommand.Settings>
         }
         catch (TimeoutException ex)
         {
+            if (settings.Json)
+            {
+                CliOutput.WriteJsonError(ex.Message, "timeout");
+                return -2;
+            }
+
             AnsiConsole.MarkupLine($"[red]Timeout:[/] {ex.Message}");
             return -2;
         }
         catch (Exception ex)
         {
+            if (settings.Json)
+            {
+                CliOutput.WriteJsonError(ex.Message, "error");
+                return -1;
+            }
+
             AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message}");
             return -1;
         }
