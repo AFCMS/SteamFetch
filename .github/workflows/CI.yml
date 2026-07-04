@@ -42,7 +42,7 @@ jobs:
               echo "::error::Unable to read Version from SteamFetch.csproj"
               exit 1
             fi
-            VERSION="$BASE_VERSION-ci-$(date +'%Y%m%d.%H%M%S')"
+            VERSION="$BASE_VERSION-ci-$(date +'%Y%m%d%H%M%S')"
             echo "Detected CI build: base_version=$BASE_VERSION version=$VERSION"
           fi
           echo "PACKAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
