@@ -20,10 +20,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
 
@@ -51,10 +53,10 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Pack
-        run: dotnet pack --configuration Release --no-build --output ./nupkg -p:PackageVersion=${{ env.PACKAGE_VERSION }}
+        run: dotnet pack --configuration Release --no-build --output ./nupkg -p:PackageVersion=${PACKAGE_VERSION}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: nuget-package
           path: ./nupkg/*.nupkg
@@ -68,7 +70,7 @@ jobs:
             --skip-duplicate
 
       - name: NuGet login
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         id: login
         if: startsWith(github.ref, 'refs/tags/v')
         with:
@@ -79,5 +81,7 @@ jobs:
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
             --source https://api.nuget.org/v3/index.json \
-            --api-key ${{ steps.login.outputs.NUGET_API_KEY }} \
+            --api-key ${STEPS_LOGIN_OUTPUTS_NUGET_API_KEY} \
             --skip-duplicate
+        env:
+          STEPS_LOGIN_OUTPUTS_NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
