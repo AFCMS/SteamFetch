@@ -41,7 +41,7 @@ public class SingleCommand : AsyncCommand<SingleCommand.Settings>
         string Status,
         string? Error);
 
-    protected override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings, CancellationToken cancellationToken)
     {
         using var sk = new SteamKitInterface();
 
